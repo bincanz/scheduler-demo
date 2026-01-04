@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Scheduler</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0e14;
+            --bg-card: #131920;
+            --bg-elevated: #1a222c;
+            --border: #2a3441;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --text-muted: #6e7681;
+            --accent-cyan: #39c5cf;
+            --accent-green: #3fb950;
+            --accent-orange: #d29922;
+            --accent-red: #f85149;
+            --accent-purple: #a371f7;
+            --accent-blue: #58a6ff;
+            --gradient-warm: linear-gradient(135deg, #ff6b35 0%, #f7c531 100%);
+            --gradient-cool: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --shadow-glow: 0 0 40px rgba(57, 197, 207, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            background-image: 
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(57, 197, 207, 0.12), transparent),
+                radial-gradient(ellipse 60% 40% at 80% 100%, rgba(163, 113, 247, 0.08), transparent);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.6s ease-out 0.1s backwards;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        input[type="number"], input[type="text"] {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            width: 140px;
+            transition: all 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-cyan);
+            box-shadow: 0 0 0 3px rgba(57, 197, 207, 0.15);
+        }
+
+        button {
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-blue) 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            color: var(--bg-deep);
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            align-self: flex-end;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(57, 197, 207, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.6s ease-out 0.2s backwards;
+        }
+
+        .stat {
+            text-align: center;
+            padding: 1rem 2rem;
+            background: var(--bg-card);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--accent-cyan);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .grid-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            padding: 2rem;
+            box-shadow: var(--shadow-glow);
+            animation: fadeInUp 0.6s ease-out 0.3s backwards;
+        }
+
+        .hour-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 0.5rem;
+        }
+
+        .hour-cell {
+            aspect-ratio: 1;
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            border: 1px solid transparent;
+        }
+
+        .hour-cell:hover {
+            transform: scale(1.05);
+            border-color: var(--accent-cyan);
+            z-index: 10;
+        }
+
+        .hour-cell.active {
+            background: linear-gradient(135deg, rgba(57, 197, 207, 0.2) 0%, rgba(163, 113, 247, 0.2) 100%);
+            border-color: var(--accent-cyan);
+        }
+
+        .hour-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+
+        .hour-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .hour-cell.inactive .hour-value {
+            color: var(--text-muted);
+        }
+
+        .intensity-bar {
+            position: absolute;
+            bottom: 4px;
+            left: 4px;
+            right: 4px;
+            height: 3px;
+            border-radius: 2px;
+            background: var(--border);
+            overflow: hidden;
+        }
+
+        .intensity-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .tooltip {
+            position: fixed;
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            min-width: 220px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+        }
+
+        .tooltip.visible {
+            opacity: 1;
+        }
+
+        .tooltip-header {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: var(--accent-cyan);
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tooltip-total {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .tooltip-total strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .tooltip-customers {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .tooltip-customer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+        }
+
+        .tooltip-customer-name {
+            color: var(--text-secondary);
+        }
+
+        .tooltip-customer-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-primary);
+        }
+
+        .legend {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+
+        .customer-table {
+            margin-top: 2rem;
+            animation: fadeInUp 0.6s ease-out 0.4s backwards;
+        }
+
+        .customer-table h3 {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            background: var(--bg-elevated);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        td {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: rgba(57, 197, 207, 0.05);
+        }
+
+        .priority-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .priority-1 { background: rgba(248, 81, 73, 0.2); color: var(--accent-red); }
+        .priority-2 { background: rgba(210, 153, 34, 0.2); color: var(--accent-orange); }
+        .priority-3 { background: rgba(247, 197, 49, 0.2); color: #f7c531; }
+        .priority-4 { background: rgba(63, 185, 80, 0.2); color: var(--accent-green); }
+        .priority-5 { background: rgba(88, 166, 255, 0.2); color: var(--accent-blue); }
+
+        .error-message {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 8px;
+            padding: 1rem;
+            color: var(--accent-red);
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .unmet-demand {
+            margin-top: 2rem;
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+
+        .unmet-demand h3 {
+            color: var(--accent-red);
+            margin-bottom: 1rem;
+            font-size: 1rem;
+        }
+
+        .unmet-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(248, 81, 73, 0.2);
+            font-size: 0.85rem;
+        }
+
+        .unmet-item:last-child {
+            border-bottom: none;
+        }
+
+        @media (max-width: 900px) {
+            .hour-grid {
+                grid-template-columns: repeat(6, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .hour-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            input[type="number"], input[type="text"] {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Agent Scheduler</h1>
+            <p class="subtitle">Hour-by-hour AI agent staffing calculator</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Utilization</label>
+                <input type="number" id="utilization" value="1.0" min="0.1" max="1.0" step="0.1">
+            </div>
+            <div class="control-group">
+                <label>Capacity (optional)</label>
+                <input type="number" id="capacity" placeholder="Unlimited" min="1">
+            </div>
+            <button onclick="loadSchedule()">Calculate Schedule</button>
+        </div>
+
+        <div id="error" class="error-message" style="display: none;"></div>
+
+        <div class="stats-bar">
+            <div class="stat">
+                <div class="stat-value" id="peak-agents">-</div>
+                <div class="stat-label">Peak Agents</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="active-hours">-</div>
+                <div class="stat-label">Active Hours</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="total-customers">-</div>
+                <div class="stat-label">Customers</div>
+            </div>
+        </div>
+
+        <div class="grid-container">
+            <div class="hour-grid" id="hour-grid"></div>
+            <div class="legend" id="legend"></div>
+        </div>
+
+        <div id="unmet-demand" class="unmet-demand" style="display: none;">
+            <h3>⚠️ Unmet Demand</h3>
+            <div id="unmet-list"></div>
+        </div>
+
+        <div class="customer-table">
+            <h3>Customer Details</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Priority</th>
+                        <th>Hours</th>
+                        <th>Calls</th>
+                        <th>Duration</th>
+                        <th>Agents/Hour</th>
+                    </tr>
+                </thead>
+                <tbody id="customer-table-body">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip">
+        <div class="tooltip-header" id="tooltip-hour"></div>
+        <div class="tooltip-total">Total Agents: <strong id="tooltip-total"></strong></div>
+        <div class="tooltip-customers" id="tooltip-customers"></div>
+    </div>
+
+    <script>
+        let scheduleData = null;
+        const customerColors = [
+            '#f85149', '#d29922', '#3fb950', '#58a6ff', '#a371f7', '#39c5cf',
+            '#f778ba', '#7ee787', '#79c0ff', '#d2a8ff'
+        ];
+
+        async function loadSchedule() {
+            const utilization = parseFloat(document.getElementById('utilization').value) || 1.0;
+            const capacityInput = document.getElementById('capacity').value;
+            const capacity = capacityInput ? parseInt(capacityInput) : null;
+
+            try {
+                const response = await fetch('/api/schedule', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ utilization, capacity })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showError(data.error || 'Failed to load schedule');
+                    return;
+                }
+
+                hideError();
+                scheduleData = data;
+                renderSchedule(data);
+            } catch (err) {
+                showError('Network error: ' + err.message);
+            }
+        }
+
+        function showError(message) {
+            const el = document.getElementById('error');
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error').style.display = 'none';
+        }
+
+        function renderSchedule(data) {
+            const grid = document.getElementById('hour-grid');
+            const legend = document.getElementById('legend');
+            
+            // Find max for scaling
+            const maxAgents = Math.max(...data.schedules.map(s => s.total_agents), 1);
+            
+            // Create customer color map
+            const colorMap = {};
+            data.customers.forEach((c, i) => {
+                colorMap[c.name] = customerColors[i % customerColors.length];
+            });
+
+            // Update stats
+            document.getElementById('peak-agents').textContent = maxAgents;
+            document.getElementById('active-hours').textContent = 
+                data.schedules.filter(s => s.total_agents > 0).length;
+            document.getElementById('total-customers').textContent = data.customers.length;
+
+            // Render grid
+            grid.innerHTML = '';
+            data.schedules.forEach((schedule, hour) => {
+                const cell = document.createElement('div');
+                cell.className = `hour-cell ${schedule.total_agents > 0 ? 'active' : 'inactive'}`;
+                
+                const intensity = schedule.total_agents / maxAgents;
+                const hue = 180 + (120 * (1 - intensity)); // cyan to purple
+                
+                cell.innerHTML = `
+                    <span class="hour-label">${schedule.hour}</span>
+                    <span class="hour-value">${schedule.total_agents}</span>
+                    <div class="intensity-bar">
+                        <div class="intensity-fill" style="width: ${intensity * 100}%; background: hsl(${hue}, 70%, 60%);"></div>
+                    </div>
+                `;
+
+                cell.addEventListener('mouseenter', (e) => showTooltip(e, schedule, colorMap));
+                cell.addEventListener('mouseleave', hideTooltip);
+                cell.addEventListener('mousemove', moveTooltip);
+                
+                grid.appendChild(cell);
+            });
+
+            // Render legend
+            legend.innerHTML = '';
+            data.customers.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.innerHTML = `
+                    <div class="legend-color" style="background: ${colorMap[c.name]}"></div>
+                    <span>${c.name}</span>
+                `;
+                legend.appendChild(item);
+            });
+
+            // Render customer table
+            const tbody = document.getElementById('customer-table-body');
+            tbody.innerHTML = '';
+            data.customers.forEach(c => {
+                // Calculate agents per hour for this customer
+                const customerSchedules = data.schedules.filter(s => s.customers[c.name]);
+                const agentsPerHour = customerSchedules.length > 0 
+                    ? customerSchedules[0].customers[c.name] 
+                    : 0;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td style="color: ${colorMap[c.name]}">${c.name}</td>
+                    <td><span class="priority-badge priority-${c.priority}">${c.priority}</span></td>
+                    <td>${c.start_hour}:00 - ${c.end_hour}:00</td>
+                    <td>${c.calls.toLocaleString()}</td>
+                    <td>${c.duration}s</td>
+                    <td>${agentsPerHour}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Render unmet demand if applicable
+            const unmetDiv = document.getElementById('unmet-demand');
+            if (data.capacity_analysis && Object.keys(data.capacity_analysis.unmet_demand).length > 0) {
+                unmetDiv.style.display = 'block';
+                const list = document.getElementById('unmet-list');
+                list.innerHTML = '';
+                
+                for (const [name, info] of Object.entries(data.capacity_analysis.unmet_demand)) {
+                    const item = document.createElement('div');
+                    item.className = 'unmet-item';
+                    item.innerHTML = `
+                        <span>${name} (Priority ${info.priority})</span>
+                        <span>${info.calls_unmet.toLocaleString()} calls (${info.percent_unmet}%)</span>
+                    `;
+                    list.appendChild(item);
+                }
+            } else {
+                unmetDiv.style.display = 'none';
+            }
+        }
+
+        function showTooltip(event, schedule, colorMap) {
+            const tooltip = document.getElementById('tooltip');
+            
+            document.getElementById('tooltip-hour').textContent = schedule.hour;
+            document.getElementById('tooltip-total').textContent = schedule.total_agents;
+            
+            const customersDiv = document.getElementById('tooltip-customers');
+            customersDiv.innerHTML = '';
+            
+            if (Object.keys(schedule.customers).length === 0) {
+                customersDiv.innerHTML = '<div class="tooltip-customer"><span class="tooltip-customer-name">No active customers</span></div>';
+            } else {
+                for (const [name, agents] of Object.entries(schedule.customers)) {
+                    const div = document.createElement('div');
+                    div.className = 'tooltip-customer';
+                    div.innerHTML = `
+                        <span class="tooltip-customer-name" style="color: ${colorMap[name]}">${name}</span>
+                        <span class="tooltip-customer-value">${agents}</span>
+                    `;
+                    customersDiv.appendChild(div);
+                }
+            }
+            
+            tooltip.classList.add('visible');
+            moveTooltip(event);
+        }
+
+        function moveTooltip(event) {
+            const tooltip = document.getElementById('tooltip');
+            const x = event.clientX + 15;
+            const y = event.clientY + 15;
+            
+            // Keep tooltip in viewport
+            const rect = tooltip.getBoundingClientRect();
+            const maxX = window.innerWidth - rect.width - 20;
+            const maxY = window.innerHeight - rect.height - 20;
+            
+            tooltip.style.left = Math.min(x, maxX) + 'px';
+            tooltip.style.top = Math.min(y, maxY) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('tooltip').classList.remove('visible');
+        }
+
+        // Load on page load
+        window.addEventListener('load', loadSchedule);
+    </script>
+</body>
+</html>
+

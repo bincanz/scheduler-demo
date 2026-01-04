@@ -28,14 +28,14 @@ make demo
 
 CSV file with the following columns:
 
-| Column | Type | Description |
-|--------|------|-------------|
-| CustomerName | string | Customer identifier |
-| AverageCallDurationSeconds | int | Average call duration in seconds |
-| StartTimePT | string | Start time in PT (e.g., "9AM", "7PM") |
-| EndTimePT | string | End time in PT (exclusive) |
-| NumberOfCalls | int | Total calls to be made |
-| Priority | int | 1-5, where 1 is highest priority |
+| Column                     | Type    | Description                                     |
+|----------------------------|---------|-------------------------------------------------|
+| CustomerName               | string  | Customer identifier                             |
+| AverageCallDurationSeconds | int     | Average call duration in seconds                |
+| StartTimePT                | string  | Start time in PT (e.g., "9AM", "7PM")           |
+| EndTimePT                  | string  | End time in PT (exclusive)                      |
+| NumberOfCalls              | int     | Total calls to be made                          |
+| Priority                   | int     | 1-5, where 1 is highest priority                |
 
 Example:
 ```csv
@@ -69,13 +69,13 @@ python run.py --input ./input.csv --verbose
 
 ### CLI Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--input`, `-i` | (required) | Path to input CSV file |
-| `--utilization`, `-u` | 1.0 | Agent utilization factor (0.0-1.0) |
-| `--capacity`, `-c` | unlimited | Maximum agent capacity |
-| `--format`, `-f` | text | Output format: text, json, csv |
-| `--verbose`, `-v` | false | Show diagnostic information |
+| Option              | Default     | Description                                 |
+|---------------------|-------------|---------------------------------------------|
+| `--input`, `-i`     | (required)  | Path to input CSV file                      |
+| `--utilization`, `-u` | 1.0       | Agent utilization factor (0.0-1.0)          |
+| `--capacity`, `-c`  | unlimited   | Maximum agent capacity                      |
+| `--format`, `-f`    | text        | Output format: text, json, csv              |
+| `--verbose`, `-v`   | false       | Show diagnostic information                 |
 
 ## 📊 Output Format
 

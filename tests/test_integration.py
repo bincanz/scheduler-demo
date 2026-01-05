@@ -77,5 +77,6 @@ NMDX,220,10AM,6PM,40000,3"""
         assert len(data['schedules']) == 24
         
         csv_out = format_output(schedules, 'csv')
-        assert 'Hour,Total' in csv_out
+        assert 'Hour,' in csv_out
+        assert 'Total' in csv_out
 

@@ -4,9 +4,12 @@ Command-line interface for the agent scheduler.
 
 import argparse
 import sys
+from datetime import datetime
 from typing import List, Optional
+from zoneinfo import ZoneInfo
 
-from .parser import parse_csv, ValidationError
+from .models import DEFAULT_TIMEZONE, create_schedule_context
+from .parser import parse_csv, parse_date, validate_timezone, ValidationError
 from .scheduler import compute_schedule, compute_with_capacity
 from .formatter import format_output
 
@@ -22,7 +25,20 @@ Examples:
   %(prog)s --input calls.csv
   %(prog)s --input calls.csv --utilization 0.8
   %(prog)s --input calls.csv --capacity 500 --format json
-  %(prog)s --input calls.csv --capacity 1000 --format csv
+  %(prog)s --input calls.csv --timezone America/New_York
+  %(prog)s --input calls.csv --date 2024-03-10 --timezone America/Los_Angeles
+
+Timezone Examples:
+  America/Los_Angeles  (Pacific Time)
+  America/New_York     (Eastern Time)
+  America/Chicago      (Central Time)
+  America/Denver       (Mountain Time)
+  Europe/London        (GMT/BST)
+  UTC                  (Coordinated Universal Time)
+
+DST Transition Dates (for testing):
+  2024-03-10  Spring forward (23-hour day in US)
+  2024-11-03  Fall back (25-hour day in US)
         """
     )
     
@@ -54,6 +70,27 @@ Examples:
         choices=['text', 'json', 'csv'],
         default='text',
         help='Output format. Default: text'
+    )
+    
+    parser.add_argument(
+        '--timezone', '-tz',
+        default=DEFAULT_TIMEZONE,
+        metavar='TZ',
+        help=f'Timezone for scheduling (IANA format). Default: {DEFAULT_TIMEZONE}'
+    )
+    
+    parser.add_argument(
+        '--date', '-d',
+        default=None,
+        metavar='YYYY-MM-DD',
+        help='Date to schedule for (YYYY-MM-DD). Default: today. '
+             'Use specific dates to test DST transitions.'
+    )
+    
+    parser.add_argument(
+        '--show-utc',
+        action='store_true',
+        help='Include UTC timestamps in output (JSON format only)'
     )
     
     parser.add_argument(
@@ -99,6 +136,22 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 1
     
     try:
+        # Validate timezone
+        tz = validate_timezone(args.timezone)
+        
+        # Parse date
+        schedule_date = parse_date(args.date)
+        
+        # Create schedule context
+        context = create_schedule_context(schedule_date, tz)
+        
+        if args.verbose:
+            print(f"Timezone: {args.timezone}", file=sys.stderr)
+            print(f"Date: {schedule_date.strftime('%Y-%m-%d')}", file=sys.stderr)
+            print(f"Hours in day: {context.num_hours}", file=sys.stderr)
+            if context.is_dst_transition:
+                print(f"DST Note: {context.dst_info}", file=sys.stderr)
+        
         # Parse input CSV
         if args.verbose:
             print(f"Reading input from: {args.input}", file=sys.stderr)
@@ -127,7 +180,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             capacity_info = compute_with_capacity(
                 requests, 
                 args.capacity, 
-                args.utilization
+                args.utilization,
+                context
             )
             schedules = capacity_info.schedules
         else:
@@ -136,10 +190,16 @@ def main(argv: Optional[List[str]] = None) -> int:
                 print(f"Computing unconstrained schedule (utilization={args.utilization})", 
                       file=sys.stderr)
             
-            schedules = compute_schedule(requests, args.utilization)
+            schedules = compute_schedule(requests, args.utilization, context)
         
         # Format and print output
-        output = format_output(schedules, args.format, capacity_info)
+        output = format_output(
+            schedules, 
+            args.format, 
+            capacity_info, 
+            context=context,
+            show_utc=args.show_utc
+        )
         print(output)
         
         return 0
@@ -160,4 +220,3 @@ def main(argv: Optional[List[str]] = None) -> int:
 
 if __name__ == '__main__':
     sys.exit(main())
-

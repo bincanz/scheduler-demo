@@ -4,7 +4,7 @@ import pytest
 import tempfile
 from pathlib import Path
 
-from scheduler.parser import parse_time_pt, parse_csv, ValidationError
+from scheduler.parser import parse_time_pt, parse_time_to_hour, parse_csv, ValidationError
 
 
 class TestParseTimePT:

@@ -4,10 +4,12 @@ CSV parser with validation for customer call requirements.
 
 import csv
 import re
+from datetime import datetime
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from .models import CustomerRequest
+from .models import CustomerRequest, DEFAULT_TIMEZONE
 
 
 class ValidationError(Exception):
@@ -15,9 +17,58 @@ class ValidationError(Exception):
     pass
 
 
-def parse_time_pt(time_str: str) -> int:
+def validate_timezone(tz_str: str) -> ZoneInfo:
     """
-    Parse Pacific Time string (e.g., '9AM', '7PM', '12PM') to hour (0-23).
+    Validate and return a ZoneInfo object for the given timezone string.
+    
+    Args:
+        tz_str: Timezone string (e.g., 'America/Los_Angeles', 'US/Pacific')
+        
+    Returns:
+        ZoneInfo object
+        
+    Raises:
+        ValidationError: If timezone is invalid
+    """
+    try:
+        return ZoneInfo(tz_str)
+    except ZoneInfoNotFoundError:
+        raise ValidationError(
+            f"Invalid timezone: '{tz_str}'. "
+            f"Use IANA timezone names like 'America/Los_Angeles', 'America/New_York', 'Europe/London'"
+        )
+
+
+def parse_date(date_str: Optional[str]) -> datetime:
+    """
+    Parse a date string or return today's date.
+    
+    Args:
+        date_str: Date string in YYYY-MM-DD format, or None for today
+        
+    Returns:
+        datetime object for the specified date
+        
+    Raises:
+        ValidationError: If date format is invalid
+    """
+    if date_str is None:
+        return datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    try:
+        return datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        raise ValidationError(
+            f"Invalid date format: '{date_str}'. Expected YYYY-MM-DD (e.g., 2024-03-10)"
+        )
+
+
+def parse_time_to_hour(time_str: str) -> int:
+    """
+    Parse time string (e.g., '9AM', '7PM', '12PM') to hour (0-23).
+    
+    This parses the hour component only. For full datetime handling,
+    use parse_time_for_date().
     
     Args:
         time_str: Time string like '9AM', '12PM', '7PM'
@@ -50,6 +101,54 @@ def parse_time_pt(time_str: str) -> int:
         if hour == 12:
             return 12  # 12PM = noon = 12
         return hour + 12
+
+
+def parse_time_for_date(time_str: str, date: datetime, tz: ZoneInfo) -> datetime:
+    """
+    Parse time string and combine with date in the specified timezone.
+    
+    Handles DST transitions:
+    - If time doesn't exist (spring forward), raises ValidationError with explanation
+    - If time is ambiguous (fall back), uses the first occurrence (DST time)
+    
+    Args:
+        time_str: Time string like '9AM', '7PM'
+        date: The date to combine with
+        tz: Timezone for the resulting datetime
+        
+    Returns:
+        Timezone-aware datetime
+        
+    Raises:
+        ValidationError: If time format is invalid or time doesn't exist on that date
+    """
+    hour = parse_time_to_hour(time_str)
+    
+    # Create naive datetime then localize
+    naive_dt = datetime(date.year, date.month, date.day, hour, 0, 0)
+    
+    try:
+        # Use fold=0 for first occurrence (DST time) during ambiguous times
+        local_dt = naive_dt.replace(tzinfo=tz, fold=0)
+        
+        # Verify the hour survived localization (catches non-existent times)
+        # During spring forward, 2AM becomes 3AM
+        if local_dt.hour != hour:
+            raise ValidationError(
+                f"Time {time_str} does not exist on {date.strftime('%Y-%m-%d')} "
+                f"due to DST transition in {tz}"
+            )
+        
+        return local_dt
+        
+    except Exception as e:
+        if isinstance(e, ValidationError):
+            raise
+        raise ValidationError(f"Error parsing time {time_str} for date {date}: {e}")
+
+
+# Alias for backward compatibility
+parse_time_pt = parse_time_to_hour
 
 
 def parse_csv(file_path: str) -> Tuple[List[CustomerRequest], List[str]]:
@@ -134,9 +233,9 @@ def parse_csv(file_path: str) -> Tuple[List[CustomerRequest], List[str]]:
                 except ValueError:
                     raise ValidationError(f"Invalid Priority: {row[col_map['Priority']]}")
                 
-                # Parse times
-                start_hour = parse_time_pt(row[col_map['StartTimePT']])
-                end_hour = parse_time_pt(row[col_map['EndTimePT']])
+                # Parse times (as hour integers for now)
+                start_hour = parse_time_to_hour(row[col_map['StartTimePT']])
+                end_hour = parse_time_to_hour(row[col_map['EndTimePT']])
                 
                 if start_hour >= end_hour:
                     raise ValidationError(
@@ -163,4 +262,3 @@ def parse_csv(file_path: str) -> Tuple[List[CustomerRequest], List[str]]:
         warnings.append("CSV file contains no data rows")
     
     return requests, warnings
-
